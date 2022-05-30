@@ -164,7 +164,7 @@ def train(args, model):
     criterion = nn.MSELoss().to(args.device)
     if args.fp16:
         try:
-            from apex.optimizers import FusedAdam
+            from apex.optimizers import FusedAdam, FusedSGD
             from apex import amp
         except ImportError:
             raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")

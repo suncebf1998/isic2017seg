@@ -33,10 +33,10 @@ def make_cache(data_root_dir: str, mode: str="train", overlap: bool=False, rando
     if not os.path.isdir(data_root_dir):
         os.makedirs(data_root_dir)
     
-    cache_file = data_root_dir + mode + '.bin' if data_root_dir.endswith('/') else data_root_dir[:-1] + mode + '.bin'
+    cache_file = data_root_dir + mode + '.bin' if data_root_dir.endswith('/') else data_root_dir+ '/' + mode + '.bin'
 
-    datadir = data_root_dir + subpath[mode]["data"] if data_root_dir.endswith('/') else data_root_dir[:-1] + subpath[mode]["data"]
-    gtdir = data_root_dir + subpath[mode]["groudtruth"] if data_root_dir.endswith('/') else data_root_dir[:-1] + subpath[mode]["groudtruth"] 
+    datadir = data_root_dir + subpath[mode]["data"] if data_root_dir.endswith('/') else data_root_dir + '/' + subpath[mode]["data"]
+    gtdir = data_root_dir + subpath[mode]["groudtruth"] if data_root_dir.endswith('/') else data_root_dir + '/' + subpath[mode]["groudtruth"] 
     if os.path.isfile(cache_file) and not overlap:
         pathdict = torch.load(cache_file)
     
@@ -60,7 +60,7 @@ def make_cache(data_root_dir: str, mode: str="train", overlap: bool=False, rando
 
 class ISICDataset2017(torch.utils.data.Dataset):
 
-    def __init__(self, data_root_dir: str, mode: str="train", size: tuple=(224, 224),overlap: bool=False, random=random):
+    def __init__(self, data_root_dir: str, mode: str="train", size: tuple=(224, 224), overlap: bool=False, random=random):
         pathdict, self.datadir, self.gtdir = make_cache(data_root_dir, mode, overlap, random)
         self.datapaths = pathdict["data"]
         self.gtpaths = pathdict["groudtruth"]
@@ -92,5 +92,5 @@ if __name__ == "__main__":
         count = 0
         for data, gt in tqdm(dataset):
             count += 1
-            # break
-        print(f"mode: {mode}, count: {count}, shape: {data.shape} {gt.shape}")
+            break
+        print(f"mode: {mode}, count: {count}, shape: {data.shape} {data.dtype} {gt.shape} {gt.dtype}")

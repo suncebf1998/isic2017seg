@@ -1,3 +1,5 @@
+from turtle import forward
+from numpy import reshape
 import torch
 from torch import nn, softmax
 from torch import Tensor
@@ -49,6 +51,26 @@ class DiceLoss(nn.Module):
             loss += dice * weight[i]
         return loss / self.n_classes
 
+class Criterion(torch.nn.Module):
+    def __init__(self, num_classes:int):
+        super().__init__()
+        self.n_classes = num_classes
+        self.loss = torch.nn.BCELoss() if num_classes == 1 else torch.nn.CrossEntropyLoss()
+    
+    def forward(self, inputs, target, softmax=True):
+        """
+        input: batch, classes, ... float
+        target: batch, ... int
+        """
+        if softmax:
+            inputs = torch.softmax(inputs, dim=1) if self.n_classes > 1 else torch.sigmoid(inputs) # inputs.sum(-1) (== 11)
+        if self.n_classes == 1:
+            target = target.reshape(*inputs.shape).float()
+        else:
+            target = target.long()
+        return self.loss(inputs, target)
+
+
 
 
 # deprecated: /home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/Pytorch-UNet/utils/dice_score.py/
@@ -70,14 +92,14 @@ def dice_loss(input: Tensor, target: Tensor, multiclass: bool = False):
 if __name__ == "__main__":
     print("---- start utils.loss Diceloss test ----")
 
-    loss_1 = DiceLoss(1)
-    data_x = torch.randn(16, 1, 7, 7)
-    data_y = torch.randint(0, 2 ,(16, 1, 7, 7))
+    loss_1 = DiceLoss(1).to("cuda:0")
+    data_x = torch.randn(16, 1, 7, 7).to("cuda:0")
+    data_y = torch.randint(0, 2 ,(16, 1, 7, 7)).to("cuda:0")
     print("\tloss value: {:1.4}".format(loss_1(data_x, data_y, softmax=True).item()))
     
-    loss_1 = DiceLoss(3)
-    data_x = torch.randn(16, 3, 7, 7)
-    data_y = torch.randint(0, 4 ,(16, 7, 7))
+    loss_1 = DiceLoss(3).to("cuda:0")
+    data_x = torch.randn(16, 3, 7, 7).to("cuda:0")
+    data_y = torch.randint(0, 4 ,(16, 7, 7)).to("cuda:0")
     print("\tloss value: {:1.4}".format(loss_1(data_x, data_y, softmax=True).item()))
 
     print("---- PASS end utils.loss Diceloss test ----")

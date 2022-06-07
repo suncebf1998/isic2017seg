@@ -1,3 +1,4 @@
+# deprecated
 from typing import Tuple
 import torch.utils.data
 import torch

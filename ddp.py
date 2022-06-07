@@ -4,7 +4,7 @@ from torch import optim
 from torch.nn.parallel import DataParallel
 from torch.nn.parallel.distributed import DistributedDataParallel
 from torch.utils import data
-from model import FooModel
+from model import UNet
 import sys
 import os
 import torch
@@ -19,10 +19,11 @@ from torch.multiprocessing import Process
 from tqdm import tqdm
 from tqdm.auto import trange
 from utils import getLoggerWithRank, redirect_warnings_to_logger
-from dataset import FooDataset
+from dataset import ISICDataset2017
 import argparse
 import warnings
 from utils import is_main_process
+from utils.loss import DiceLoss
 
 PT_LR_SCHEDULER_WARNING = "Please also save or load the state of the optimzer when saving or loading the scheduler."
 
@@ -132,7 +133,8 @@ def train(args, model):
     model = model.to(args.device)
 
     # Load the training dataset
-    train_dataset = FooDataset(100000)
+    data_root_dir = args.data_root_dir
+    train_dataset = ISICDataset2017(data_root_dir=data_root_dir)
 
     # Choose a proper sampler
     if args.local_rank != -1:
@@ -161,7 +163,10 @@ def train(args, model):
             train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
 
     # Loss Function, Optimizer, Scheduler
-    criterion = nn.MSELoss().to(args.device)
+    # criterion = nn.MSELoss().to(args.device)
+    dice_loss = DiceLoss(args.num_classes)
+    criterion = nn.CrossEntropyLoss()
+    learning_rate = args.lr
     if args.fp16:
         try:
             from apex.optimizers import FusedAdam, FusedSGD
@@ -170,7 +175,7 @@ def train(args, model):
             raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
 
         optimizer = FusedSGD(model.parameters(),
-                              lr=1e-3)
+                              lr=learning_rate)
         model, optimizer = amp.initialize(
             model,
             optimizers=optimizer,
@@ -180,7 +185,8 @@ def train(args, model):
         )
         log.info("FP16 launched")
     else:
-        optimizer = optim.SGD(model.parameters(), lr=1e-3)
+        optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+        # optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9)
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=t_total
     )
@@ -219,7 +225,8 @@ def train(args, model):
                 model.train()
                 x, y = x.to(args.device), y.to(args.device)
                 outputs = model(x)
-                loss = criterion(outputs, y)
+                loss = criterion(outputs, y.long()) 
+                loss += dice_loss(outputs, y.int(), softmax=True)
 
                 # Handling loss scaling
                 if args.n_gpu > 1:
@@ -306,9 +313,13 @@ def main():
     parser.add_argument("--fp16", action="store_true")
     parser.add_argument("--loss_scale", type=int, default=0)
     parser.add_argument("--fp16_opt_level", type=str, default="O2")
+    parser.add_argument("--data_root_dir", type=str, default="/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic")
+    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
+                        help='Learning rate', dest='lr')
+    parser.add_argument("--num_classes", type=int, default=1)
     args = parser.parse_args()
     setup(args)
-    model = FooModel()
+    model = UNet(3, args.num_classes)
     train(args, model)
     cleanup(args)
     log.warning("Process exited.")

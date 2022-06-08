@@ -18,4 +18,9 @@ class DebugLog:
 
 
     def info(self, msg):
-        self.print(msg)
+        self.print("info:", msg)
+
+    def error(self, msg):
+        self.print("error:", msg)
+    
+  

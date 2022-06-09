@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from torch import optim, softmax
-from model import UNet
+from model import UNet, SwinUnet, Map
 import os
 import torch
 import torch.cuda
@@ -20,17 +20,19 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 
 # setting config
+modelname = "map"
 data_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
 pt_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
 train_batch_size = 64
+size = (224, 224)
 iter_ratio = 1
 num_workers = 2 
 gradient_accumulation_steps = 1
-num_train_epochs = 120
+num_train_epochs = 250
 learning_rate = 1e-5
 num_classes = 1
 input_channel = 3 
-fp16 = True
+fp16 = False
 fp16_opt_level = "02"
 loss_scale = 0
 warmup_steps = 100
@@ -39,7 +41,7 @@ max_grad_norm = 1000.
 use_log = True
 logging_steps = 1
 save_directory = "./weights/"
-device_name = "cuda:1"
+device_name = "cuda:0"
 
 
 def save_model(model, save_directory, only_print=False):
@@ -135,13 +137,18 @@ def train(
                         "loss", (tr_loss - logging_loss) / logging_steps, global_step)
                     tb_writer.add_scalar("valid_loss", dloss, global_step)
                     logging_loss = tr_loss
-    save_model(model, save_directory + f"last_model_loss={dice_loss.item()}.pt")
+    save_model(model, save_directory + f"last_model_loss={dloss.item()}.pt")
 
 
 
 
 # load model dataloader
-model = UNet(input_channel, num_classes)
+if modelname == "unet":
+    model = UNet(input_channel, num_classes) # 31 037 633 31M
+elif modelname == "swinunet":
+    model = SwinUnet(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2) # 27 168 132 27M
+elif modelname == "map":
+    model = Map(size,input_channel, num_classes) # 556 289 0.5M
 
 ## use original data
 # train_dataset = ISICDataset2017(data_root_dir=data_root_dir)
@@ -195,6 +202,7 @@ else:
 scheduler = get_linear_schedule_with_warmup(
     optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total
 )
+
 
 train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device)
 

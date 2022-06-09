@@ -17,10 +17,10 @@ class DebugLog:
         self.print = print if printfn is None else printfn
 
 
-    def info(self, msg):
+    def info(self, msg, *args, **kwargs):
         self.print("info:", msg)
 
-    def error(self, msg):
+    def error(self, msg, *args, **kwargs):
         self.print("error:", msg)
     
   

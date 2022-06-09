@@ -1,11 +1,7 @@
 import torch
-# from csdn
 
 
-
-
-
-def get_parameter_number(model: torch.nn.Module) -> dict:
+def get_parameter_number(model: torch.nn.Module, printable:bool=False) -> dict:
     """
     stat the total param num and the num of trainable
     model: the model to be evaluated.
@@ -13,7 +9,11 @@ def get_parameter_number(model: torch.nn.Module) -> dict:
     """
     total_num = sum(p.numel() for p in model.parameters())
     trainable_num = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    return {'Total': total_num, 'Trainable': trainable_num}
+    model_info = {'Total': total_num, 'Trainable': trainable_num}
+    if printable:
+        for key, value in model_info.items():
+            print(key, value, sep="\t")
+    return model_info
 
 
 # from pytorch_lightning import LightningModule

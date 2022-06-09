@@ -4,6 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.transforms import Resize, InterpolationMode
 
 
 class DoubleConv(nn.Module):
@@ -38,6 +39,21 @@ class Down(nn.Module):
 
     def forward(self, x):
         return self.maxpool_conv(x)
+
+class Down_Up(nn.Module):
+    """Downscaling and Upscaling with maxpool and repeat"""
+
+    def __init__(self, ratio=2, size=(224, 224)):
+        super().__init__()
+        self.size = size
+        self.down = nn.AvgPool2d(ratio)
+        self.up = nn.UpsamplingNearest2d(scale_factor=ratio)
+    
+    def forward(self, x):
+        assert x.shape[2] == self.size[0] and x.shape[3] == self.size[1], \
+             f"input x's shape ({x.shape[2]}, {x.shape[3]}) must be the same with size {self.size}"
+        return self.up(self.down(x))
+
 
 
 class Up(nn.Module):

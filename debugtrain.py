@@ -29,7 +29,7 @@ iter_ratio = 1
 num_workers = 2 
 gradient_accumulation_steps = 1
 num_train_epochs = 250
-learning_rate = 1e-5
+learning_rate = 5e-4 # 1e-5
 num_classes = 1
 input_channel = 3 
 fp16 = False
@@ -40,8 +40,9 @@ log = DebugLog()
 max_grad_norm = 1000.
 use_log = True
 logging_steps = 1
-save_directory = "./weights/"
+save_directory = "./weights/use_lrunchanged_" + modelname
 device_name = "cuda:0"
+use_static = True
 
 
 def save_model(model, save_directory, only_print=False):
@@ -62,7 +63,7 @@ def save_model(model, save_directory, only_print=False):
 
 # tb_log
 if use_log:
-    tb_writer = SummaryWriter()
+    tb_writer = SummaryWriter(filename_suffix="learningratex50")
     log = DebugLog()
 
 def set_seed(seed, cuda=True):
@@ -95,15 +96,9 @@ def train(
                 outputs = model(x)
                 loss = criterion(outputs, y, softmax=True) 
                 dloss = dice_loss(outputs, y, softmax=True)
-                # print()
-                # print(dloss)
-                # print(type(dloss))
-                # print()
-                # 1 / 0
                 loss += dloss
                 if gradient_accumulation_steps > 1:
                         loss = loss / gradient_accumulation_steps
-                # Don't call zero_grad() until we have accumulated enough steps
                 loss.backward()
                 batch_iterator.set_postfix(loss=loss.item())
                 tr_loss += loss.item()
@@ -137,7 +132,7 @@ def train(
                         "loss", (tr_loss - logging_loss) / logging_steps, global_step)
                     tb_writer.add_scalar("valid_loss", dloss, global_step)
                     logging_loss = tr_loss
-    save_model(model, save_directory + f"last_model_loss={dloss.item()}.pt")
+    save_model(model, save_directory + f"global_step={global_step}__last_model_loss={dloss.item()}.pt")
 
 
 
@@ -165,6 +160,8 @@ length = 0
 for _ in train_dataloader:
     length += 1
 t_total = length // gradient_accumulation_steps * num_train_epochs
+if use_static:
+    t_total *= 1e3
 valid_num_workers = min(2, num_workers)
 valid_dataset = ISIC2017IterDataset(pt_root_dir + 'valid/', ratio=iter_ratio)
 valid_dataloader = torch.utils.data.DataLoader(train_dataset, num_workers=valid_num_workers)

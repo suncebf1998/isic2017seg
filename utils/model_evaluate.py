@@ -1,4 +1,6 @@
 import torch
+import time
+from functools import wraps
 
 
 def get_parameter_number(model: torch.nn.Module, printable:bool=False) -> dict:
@@ -16,12 +18,18 @@ def get_parameter_number(model: torch.nn.Module, printable:bool=False) -> dict:
     return model_info
 
 
-# from pytorch_lightning import LightningModule
-# def get_detail_pl_pnumber(model: LightningModule, model_name='model'):
-#     ret = []
-#     for submodel in model._modules['model'].children():
-#         name = submodel._get_name()
-#         total_num = sum(p.numel() for p in submodel.parameters())
-#         trainable_num = sum(p.numel() for p in submodel.parameters() if p.requires_grad)
-#         ret.append((name, {'Total': total_num, 'Trainable': trainable_num}))
-#     return ret
+def time_it(fn):
+    @wraps(fn)
+    def inner(*args, **kwargs):
+        error = None
+        start = time.time()
+        try:
+            ret = fn(*args, **kwargs)
+        except Exception as e:
+            error = e
+        delta = time.time() - start
+        exitmsg = "Successfully done" if error is None else "Error happened: ## " + error + " ##"
+        msg = "{} wall time: {:.2} seconds".format(exitmsg, delta)
+        return {"result": ret, "time":delta, "message":msg}
+    return inner
+

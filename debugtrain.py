@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 from torch import optim, softmax
-from model import UNet, SwinUnet, Map
+from model import UNet, SwinUnet # , Map
+from model.map2022061002 import MultiAveragePool as Map
 import os
 import torch
 import torch.cuda
@@ -13,12 +14,11 @@ import random
 import numpy as np
 from tqdm import tqdm
 from tqdm.auto import trange
-from dataset import ISICDataset2017,ISIC2017IterDataset
-from utils import is_main_process
+from dataset import ISIC2017IterDataset # ISICDataset2017,
 from utils.loss import DiceLoss, Criterion
 from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
-
+from utils.model_evaluate import get_parameter_number, time
 # setting config
 modelname = "map"
 data_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
@@ -40,7 +40,7 @@ log = DebugLog()
 max_grad_norm = 1000.
 use_log = True
 logging_steps = 1
-save_directory = "./weights/use_lrunchanged_" + modelname
+save_directory = "./weights/SGDrecreat_stuc_64_" + modelname + "_"
 device_name = "cuda:0"
 use_static = True
 
@@ -72,15 +72,23 @@ def set_seed(seed, cuda=True):
     torch.manual_seed(seed)
     if cuda > 0:
         torch.cuda.manual_seed_all(seed)
-
+# easy running:
+def setup_optim(model, learning_rate):
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total
+    )
+    return optimizer, scheduler
+# @time_it
 def train(
     model:nn.Module, train_dataloader:torch.utils.data.DataLoader, 
     num_train_epochs:int, valid_dataloader:torch.utils.data.DataLoader, gradient_accumulation_steps:int=gradient_accumulation_steps,
     logging_steps:int=logging_steps, device=None, save_directory=None, warmup_epoch=100):
     global_step = 0
-    tr_loss, logging_loss = 0., 0.
+    # tr_loss, logging_loss = 0., 0.
     best_loss = None
     # best_model = None
+    optimizer, scheduler = setup_optim(model, learning_rate)
     model = model.to(device)
     if device is None:
         device = torch.device("cuda:0")
@@ -101,7 +109,9 @@ def train(
                         loss = loss / gradient_accumulation_steps
                 loss.backward()
                 batch_iterator.set_postfix(loss=loss.item())
-                tr_loss += loss.item()
+                # tr_loss += loss.item()
+                tb_writer.add_scalar(
+                        "loss", loss.item(), global_step)
 
                 # When we reached accumulation steps, do the optimization step
                 if (step + 1) % gradient_accumulation_steps == 0:
@@ -127,23 +137,26 @@ def train(
                             best_loss_save_directory = save_directory + f"best_loss={dloss.item()}.pt"
                             # save_model(model, save_directory=best_loss_save_directory)
                     tb_writer.add_scalar(
-                        "lr", scheduler.get_last_lr()[0], global_step)
+                        "epoch", epoch, global_step)
                     tb_writer.add_scalar(
-                        "loss", (tr_loss - logging_loss) / logging_steps, global_step)
+                        "lr", scheduler.get_last_lr()[0], global_step)
+                    
                     tb_writer.add_scalar("valid_loss", dloss, global_step)
-                    logging_loss = tr_loss
+                    # logging_loss = tr_loss
     save_model(model, save_directory + f"global_step={global_step}__last_model_loss={dloss.item()}.pt")
 
 
 
 
 # load model dataloader
-if modelname == "unet":
-    model = UNet(input_channel, num_classes) # 31 037 633 31M
-elif modelname == "swinunet":
-    model = SwinUnet(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2) # 27 168 132 27M
-elif modelname == "map":
-    model = Map(size,input_channel, num_classes) # 556 289 0.5M
+def make_model(modelname):
+    if modelname == "unet":
+        model = UNet(input_channel, num_classes) # 31 037 633 31M
+    elif modelname == "swinunet":
+        model = SwinUnet(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2) # 27 168 132 27M
+    elif modelname == "map":
+        model = Map(size,input_channel, num_classes) # 556 289 0.5M
+    return model
 
 ## use original data
 # train_dataset = ISICDataset2017(data_root_dir=data_root_dir)
@@ -176,32 +189,40 @@ criterion = Criterion(num_classes).to(device)
 
 
 # load optimizer scheduler
-if fp16:
-    try:
-        from apex.optimizers import FusedAdam, FusedSGD
-        from apex import amp
-    except ImportError:
-        raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
+# if fp16:
+#     try:
+#         from apex.optimizers import FusedAdam, FusedSGD
+#         from apex import amp
+#     except ImportError:
+#         raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
 
-    optimizer = FusedSGD(model.parameters(),
-                            lr=learning_rate)
-    model, optimizer = amp.initialize(
-        model,
-        optimizers=optimizer,
-        opt_level=fp16_opt_level,
-        keep_batchnorm_fp32=False,
-        loss_scale="dynamic" if loss_scale == 0 else loss_scale,
-    )
-    log.info("FP16 launched")
-else:
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-    # optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9)
-scheduler = get_linear_schedule_with_warmup(
-    optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total
-)
-
-
-train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device)
+#     optimizer = FusedSGD(model.parameters(),
+#                             lr=learning_rate)
+#     model, optimizer = amp.initialize(
+#         model,
+#         optimizers=optimizer,
+#         opt_level=fp16_opt_level,
+#         keep_batchnorm_fp32=False,
+#         loss_scale="dynamic" if loss_scale == 0 else loss_scale,
+#     )
+#     log.info("FP16 launched")
+# else:
+#     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+#     # optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, weight_decay=1e-8, momentum=0.9)
+# scheduler = get_linear_schedule_with_warmup(
+#     optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total
+# )
+del modelname
+for modelname in ("unet","swinunet", "map"):
+    save_directory = "./weights/SGD_" + modelname + "_"
+    model = make_model(modelname)
+    print(f"----{modelname}----")
+    get_parameter_number(model, True)
+    start = time.time()
+    train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device)
+    end = time.time()
+    delta = end - start
+    print("Running Total Time: {:.2f} seconds".format(delta))
 
 
                 

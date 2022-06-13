@@ -28,7 +28,7 @@ size = (224, 224)
 iter_ratio = 1
 num_workers = 2 
 gradient_accumulation_steps = 1
-num_train_epochs = 250
+num_train_epochs = 150
 learning_rate = 5e-4 # 1e-5
 num_classes = 1
 input_channel = 3 
@@ -61,10 +61,10 @@ def save_model(model, save_directory, only_print=False):
     log.info("Saved model weights.", dict(path=output_model_file))
 
 
-# tb_log
-if use_log:
-    tb_writer = SummaryWriter(filename_suffix="learningratex50")
-    log = DebugLog()
+# # tb_log
+# if use_log:
+#     tb_writer = SummaryWriter(filename_suffix="learningratex50")
+#     log = DebugLog()
 
 def set_seed(seed, cuda=True):
     random.seed(seed)
@@ -73,12 +73,14 @@ def set_seed(seed, cuda=True):
     if cuda > 0:
         torch.cuda.manual_seed_all(seed)
 # easy running:
-def setup_optim(model, learning_rate):
+def setup_optim(model, learning_rate, use_scheduler=False):
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total
-    )
-    return optimizer, scheduler
+    if use_scheduler:
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total
+        )
+        return optimizer, scheduler
+    return optimizer
 # @time_it
 def train(
     model:nn.Module, train_dataloader:torch.utils.data.DataLoader, 
@@ -88,7 +90,8 @@ def train(
     # tr_loss, logging_loss = 0., 0.
     best_loss = None
     # best_model = None
-    optimizer, scheduler = setup_optim(model, learning_rate)
+    optimizer = setup_optim(model, learning_rate)
+    # optimizer, scheduler = setup_optim(model, learning_rate)
     model = model.to(device)
     if device is None:
         device = torch.device("cuda:0")
@@ -118,7 +121,7 @@ def train(
                     torch.nn.utils.clip_grad_norm_(
                         model.parameters(), max_grad_norm)
                     optimizer.step()
-                    scheduler.step()
+                    # scheduler.step()
                     model.zero_grad()
                     global_step += 1
 
@@ -138,8 +141,8 @@ def train(
                             # save_model(model, save_directory=best_loss_save_directory)
                     tb_writer.add_scalar(
                         "epoch", epoch, global_step)
-                    tb_writer.add_scalar(
-                        "lr", scheduler.get_last_lr()[0], global_step)
+                    # tb_writer.add_scalar(
+                    #     "lr", scheduler.get_last_lr()[0], global_step)
                     
                     tb_writer.add_scalar("valid_loss", dloss, global_step)
                     # logging_loss = tr_loss
@@ -215,6 +218,14 @@ criterion = Criterion(num_classes).to(device)
 del modelname
 for modelname in ("unet","swinunet", "map"):
     save_directory = "./weights/SGD_" + modelname + "_"
+    # # tb_log
+    if use_log:
+        startime = time.ctime().replace(" ","_")
+        tb_writer = SummaryWriter(
+            log_dir="/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/runs/Adam0611",
+            filename_suffix=f"{startime}__{modelname}")
+        log = DebugLog()
+
     model = make_model(modelname)
     print(f"----{modelname}----")
     get_parameter_number(model, True)

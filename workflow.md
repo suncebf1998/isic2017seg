@@ -107,3 +107,20 @@ Job2022_06_10_00(TODOList, Time, Sync):
     Cs + MAPs -> (C + MAP)s
     """
 ```
+----unet----31M
+Total   31 037 633
+Trainable       31 037 633
+info: Saved model weights.                                                                                                                         
+Running Total Time: 3980.60 seconds   
+
+----swinunet----19M
+Total   19 344 516
+Trainable       19 344 516
+info: Saved model weights.                                                                                                                         
+Running Total Time: 3576.46 seconds    
+
+----map----0.408M
+Total   408 833
+Trainable       408 833
+info: Saved model weights.                                                                                                                         
+Running Total Time: 4301.94 seconds  

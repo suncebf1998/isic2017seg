@@ -4,7 +4,7 @@ import random
 import torch
 import torch.utils.data
 from torchvision.io import read_image
-from torchvision.transforms import Resize
+from torchvision.transforms import Resize, RandomHorizontalFlip, RandomVerticalFlip
 
 subpath = {
     "train": {
@@ -58,6 +58,21 @@ def make_cache(data_root_dir: str, mode: str="train", overlap: bool=False, rando
         torch.save(pathdict, cache_file)
     return pathdict, datadir, gtdir
 
+class Augmenting(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.hflipper = RandomHorizontalFlip(p=1.)
+        self.vflipper = RandomVerticalFlip(p=1.)
+
+    def forward(self, x, y):
+        n = random.randint(0, 2)
+        if n == 0:
+            return x, y
+        elif n == 1:
+            return self.hflipper(x), self.hflipper(y)
+        else:
+            return self.vflipper(x), self.vflipper(y)
+
 class ISICDataset2017(torch.utils.data.Dataset):
 
     def __init__(self, data_root_dir: str, mode: str="train", size: tuple=(224, 224), overlap: bool=False, random=random):
@@ -79,7 +94,27 @@ class ISICDataset2017(torch.utils.data.Dataset):
         gt = gt.view(gt.shape[1:])
         return data, gt
 
+class ISICDataset2017_Augmenting(torch.utils.data.Dataset):
 
+    def __init__(self, data_root_dir: str, mode: str="train", size: tuple=(224, 224), overlap: bool=False, random=random):
+        pathdict, self.datadir, self.gtdir = make_cache(data_root_dir, mode, overlap, random)
+        self.datapaths = pathdict["data"]
+        self.gtpaths = pathdict["groudtruth"]
+        self.resize = Resize(size)
+        self.aug = Augmenting() if mode == "train" else torch.nn.Identity()
+    
+    def __len__(self):
+        return len(self.datapaths)
+
+    def __getitem__(self, index):
+        datapath = self.datadir + '/' + self.datapaths[index]
+        gtpath = self.gtdir + '/' + self.gtpaths[index]
+        data = (read_image(datapath) / 255 - 0.5)
+        data = self.resize(data)
+        gt = (read_image(gtpath) / 255).int()
+        gt = self.resize(gt)
+        gt = gt.view(gt.shape[1:])
+        return self.aug(data, gt)
 # for importing easily
 ISICDataset, Dataset = ISICDataset2017, ISICDataset2017
 

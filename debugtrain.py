@@ -3,6 +3,7 @@
 from torch import optim, softmax
 from model import UNet, SwinUnet # , Map
 from model.map2022061002 import MultiAveragePool as Map
+from model.upernet import UPerNet
 import os
 import torch
 import torch.cuda
@@ -20,7 +21,7 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 from utils.model_evaluate import get_parameter_number, time
 # setting config
-modelname = "map"
+modelname = "upernet"
 data_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
 pt_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
 train_batch_size = 64
@@ -40,8 +41,8 @@ log = DebugLog()
 max_grad_norm = 1000.
 use_log = True
 logging_steps = 1
-save_directory = "./weights/SGDrecreat_stuc_64_" + modelname + "_"
-device_name = "cuda:0"
+save_directory = "./weights/SGD_" + modelname + "_"
+device_name = "cuda:1"
 use_static = True
 
 
@@ -159,6 +160,8 @@ def make_model(modelname):
         model = SwinUnet(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2) # 27 168 132 27M
     elif modelname == "map":
         model = Map(size,input_channel, num_classes) # 556 289 0.5M
+    elif modelname == "upernet":
+        model = UPerNet(input_channel, num_classes)
     return model
 
 ## use original data
@@ -215,8 +218,11 @@ criterion = Criterion(num_classes).to(device)
 # scheduler = get_linear_schedule_with_warmup(
 #     optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total
 # )
-del modelname
-for modelname in ("unet","swinunet", "map"):
+# del modelname
+# if modelname == "all":
+#     to_do = ("unet","swinunet", "map")
+to_do = ("unet","swinunet", "map", "upernet") if modelname == "all" else (modelname, )
+for modelname in to_do:
     save_directory = "./weights/SGD_" + modelname + "_"
     # # tb_log
     if use_log:

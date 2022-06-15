@@ -124,3 +124,29 @@ Total   408 833
 Trainable       408 833
 info: Saved model weights.                                                                                                                         
 Running Total Time: 4301.94 seconds  
+
+
+#### Day 13 - 14
+```python
+Job2022_06_13_01(TODO, Time, Classification):
+    TODO:
+        status: 0
+    Time: 
+        startime: 20220613 
+        deadline: 20220614
+        delta: 2
+    Classification: 
+        level: coding
+        details: create UperNet
+    """
+    https://github.com/SwinTransformer/Swin-Transformer-Semantic-Segmentation
+    https://arxiv.org/abs/1807.10221
+    """
+```
+
+```
+    ----upernet----
+    Total   19 424 609
+    Trainable       19 424 609
+    Running Total Time: 4322.06 seconds
+````

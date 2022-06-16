@@ -92,7 +92,7 @@ Job2022_06_10_03(TODO, Time, Classification):
 Job2022_06_10_00(TODOList, Time, Sync):
     TODOList:
         status: 0
-        result: ???
+        result: map之间无明显区别在Adam中极限在0.9左右，swinunet不能证明强于unet
         container: Job2022_06_10_01 : Job2022_06_10_03
     Time: 
         startime: 20220610 
@@ -128,7 +128,7 @@ Running Total Time: 4301.94 seconds
 
 #### Day 13 - 14
 ```python
-Job2022_06_13_01(TODO, Time, Classification):
+Job2022_06_1314_01(TODO, Time, Classification):
     TODO:
         status: 0
     Time: 
@@ -142,6 +142,31 @@ Job2022_06_13_01(TODO, Time, Classification):
     https://github.com/SwinTransformer/Swin-Transformer-Semantic-Segmentation
     https://arxiv.org/abs/1807.10221
     """
+
+Job2022_06_1314_02(TODO, Time, Classification):
+    TODO:
+        status: 0
+    Time: 
+        startime: 20220614 
+        deadline: 20220614
+        delta: 1
+    Classification: 
+        level: running
+        details: UperNet
+
+Job2022_06_1314_00(TODOList, Time, Sync):
+    TODOList:
+        status: 0
+        result: upernet参数和swinunet相近，但效果可能优于 swinunet 和 unet
+        container: Job2022_06_1314_01 : Job2022_06_1314_03
+    Time: 
+        startime: 20220613 
+        deadline: 20220614 
+        delta: None
+    Sync: 
+        hub: git
+        repository: isic2017seg.git
+        msg: 20220610 MultiAveragePool update and recreate_struc
 ```
 
 ```
@@ -150,3 +175,51 @@ Job2022_06_13_01(TODO, Time, Classification):
     Trainable       19 424 609
     Running Total Time: 4322.06 seconds
 ````
+
+
+```python
+Job2022_06_16_01(TODO, Time, Classification):
+    TODO:
+        status: 0
+    Time: 
+        startime: 20220616 
+        deadline: 20220616
+        delta: 1
+    Classification: 
+        level: coding
+        details: create swin unet laterals
+    """
+    https://github.com/SwinTransformer/Swin-Transformer-Semantic-Segmentation
+    https://arxiv.org/abs/1807.10221
+    """
+```
+
+```
+Job2022_06_16_00(TODOList, Time, Sync):
+    TODOList:
+        status: 0
+        result: upernet参数和swinunet相近，但效果可能优于 swinunet 和 unet
+        container: Job2022_06_1314_01 : Job2022_06_1314_03
+    Time: 
+        startime: 20220616
+        deadline: 20220616 
+        delta: None
+    Sync: 
+        hub: git
+        repository: isic2017seg.git
+        msg: 20220616 coding create swin unet lateral v1 and recreate swinunet without softmax
+```
+
+```
+    ----swinlateral----
+    Total   21 331 652
+    Trainable       21 331 652
+                                                                                                                        
+    Running Total Time: 2310.13 seconds  
+
+    ----swin unet without softmax V2----
+    Total   19344516
+    Trainable       19344516
+                                                                                                                                   
+    Running Total Time: 2113.26 seconds   
+```

@@ -4,6 +4,7 @@ from torch import optim, softmax
 from model import UNet, SwinUnet # , Map
 from model.map2022061002 import MultiAveragePool as Map
 from model.upernet import UPerNet
+from model.swin_unet_lateralsV2 import SwinTransformerSys as SwinUnet_Laterals
 import os
 import torch
 import torch.cuda
@@ -21,9 +22,10 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 from utils.model_evaluate import get_parameter_number, time
 # setting config
-modelname = "upernet"
+modelname = "swinlateral"
 data_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
 pt_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
+weight_dir = None # "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/weights/SGD_swinlateral_global_step=9450__last_model_loss=0.053315818309783936.pt/model.bin"# None
 train_batch_size = 64
 size = (224, 224)
 iter_ratio = 1
@@ -41,8 +43,8 @@ log = DebugLog()
 max_grad_norm = 1000.
 use_log = True
 logging_steps = 1
-save_directory = "./weights/SGD_" + modelname + "_"
-device_name = "cuda:1"
+save_directory = "./weights/Adam_" + modelname + "_"
+device_name = "cuda:0"
 use_static = True
 
 
@@ -86,8 +88,8 @@ def setup_optim(model, learning_rate, use_scheduler=False):
 def train(
     model:nn.Module, train_dataloader:torch.utils.data.DataLoader, 
     num_train_epochs:int, valid_dataloader:torch.utils.data.DataLoader, gradient_accumulation_steps:int=gradient_accumulation_steps,
-    logging_steps:int=logging_steps, device=None, save_directory=None, warmup_epoch=100):
-    global_step = 0
+    logging_steps:int=logging_steps, device=None, save_directory=None, warmup_epoch=100, stepbefore=None):
+    global_step = 0 if stepbefore is None else stepbefore
     # tr_loss, logging_loss = 0., 0.
     best_loss = None
     # best_model = None
@@ -162,6 +164,8 @@ def make_model(modelname):
         model = Map(size,input_channel, num_classes) # 556 289 0.5M
     elif modelname == "upernet":
         model = UPerNet(input_channel, num_classes)
+    elif modelname == "swinlateral":
+        model = SwinUnet_Laterals(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
     return model
 
 ## use original data
@@ -233,10 +237,12 @@ for modelname in to_do:
         log = DebugLog()
 
     model = make_model(modelname)
+    if weight_dir is not None:
+        model.load_state_dict(torch.load(weight_dir))
     print(f"----{modelname}----")
     get_parameter_number(model, True)
     start = time.time()
-    train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device)
+    train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device)#, stepbefore=9450)
     end = time.time()
     delta = end - start
     print("Running Total Time: {:.2f} seconds".format(delta))

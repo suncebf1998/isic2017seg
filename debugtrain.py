@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 
+from tkinter import SW
 from torch import optim, softmax
 from model import UNet, SwinUnet # , Map
 from model.map2022061002 import MultiAveragePool as Map
 from model.upernet import UPerNet
-from model.swin_unet_lateralsV2 import SwinTransformerSys as SwinUnet_Laterals
+from model.swin_unet_lateralsV2 import SwinTransformerSys as SwinUnet_Laterals # t_version v2
+from model.swin_unet_newembedV2 import SwinTransformerSys as SwinUnet_NewEmbed # t_version v3
+from model.swin_fpn import SwinTransformerSys as SwinUnet_FPN
 import os
 import torch
 import torch.cuda
@@ -22,7 +25,7 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 from utils.model_evaluate import get_parameter_number, time
 # setting config
-modelname = "swinlateral"
+modelname = "swinv4"
 data_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
 pt_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
 weight_dir = None # "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/weights/SGD_swinlateral_global_step=9450__last_model_loss=0.053315818309783936.pt/model.bin"# None
@@ -31,7 +34,7 @@ size = (224, 224)
 iter_ratio = 1
 num_workers = 2 
 gradient_accumulation_steps = 1
-num_train_epochs = 150
+num_train_epochs = 250
 learning_rate = 5e-4 # 1e-5
 num_classes = 1
 input_channel = 3 
@@ -44,7 +47,7 @@ max_grad_norm = 1000.
 use_log = True
 logging_steps = 1
 save_directory = "./weights/Adam_" + modelname + "_"
-device_name = "cuda:0"
+device_name = "cuda:2"
 use_static = True
 
 
@@ -164,8 +167,12 @@ def make_model(modelname):
         model = Map(size,input_channel, num_classes) # 556 289 0.5M
     elif modelname == "upernet":
         model = UPerNet(input_channel, num_classes)
-    elif modelname == "swinlateral":
+    elif modelname in ("swinlateral", "swinv2"):
         model = SwinUnet_Laterals(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
+    elif modelname in ("swinv3", "swinnewembed"):
+        model = SwinUnet_NewEmbed(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
+    elif modelname in ("swinv4", "swinfpn"):
+        model = SwinUnet_FPN(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
     return model
 
 ## use original data

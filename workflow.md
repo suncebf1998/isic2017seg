@@ -107,6 +107,8 @@ Job2022_06_10_00(TODOList, Time, Sync):
     Cs + MAPs -> (C + MAP)s
     """
 ```
+```python
+"""
 ----unet----31M
 Total   31 037 633
 Trainable       31 037 633
@@ -124,7 +126,8 @@ Total   408 833
 Trainable       408 833
 info: Saved model weights.                                                                                                                         
 Running Total Time: 4301.94 seconds  
-
+"""
+```
 
 #### Day 13 - 14
 ```python
@@ -142,7 +145,8 @@ Job2022_06_1314_01(TODO, Time, Classification):
     https://github.com/SwinTransformer/Swin-Transformer-Semantic-Segmentation
     https://arxiv.org/abs/1807.10221
     """
-
+```
+```python
 Job2022_06_1314_02(TODO, Time, Classification):
     TODO:
         status: 0
@@ -153,7 +157,8 @@ Job2022_06_1314_02(TODO, Time, Classification):
     Classification: 
         level: running
         details: UperNet
-
+```
+```python
 Job2022_06_1314_00(TODOList, Time, Sync):
     TODOList:
         status: 0
@@ -169,13 +174,16 @@ Job2022_06_1314_00(TODOList, Time, Sync):
         msg: 20220610 MultiAveragePool update and recreate_struc
 ```
 
-```
+```python
+"""
     ----upernet----
     Total   19 424 609
     Trainable       19 424 609
     Running Total Time: 4322.06 seconds
+"""
 ````
 
+#### Day 16
 
 ```python
 Job2022_06_16_01(TODO, Time, Classification):
@@ -188,13 +196,9 @@ Job2022_06_16_01(TODO, Time, Classification):
     Classification: 
         level: coding
         details: create swin unet laterals
-    """
-    https://github.com/SwinTransformer/Swin-Transformer-Semantic-Segmentation
-    https://arxiv.org/abs/1807.10221
-    """
 ```
 
-```
+```python
 Job2022_06_16_00(TODOList, Time, Sync):
     TODOList:
         status: 0
@@ -218,8 +222,87 @@ Job2022_06_16_00(TODOList, Time, Sync):
     Running Total Time: 2310.13 seconds  
 
     ----swin unet without softmax V2----
+    Total   19 344 516
+    Trainable       19 344 516
+                                                                
+    Running Total Time: 2113.26 seconds   
+```
+
+
+#### Day 17-19 for later can't finished.
+
+```python
+Job2022_06_1720_01(TODO, Time, Classification):
+    TODO:
+        status: 0
+    Time: 
+        startime: 20220617
+        deadline: 20220620
+        delta: 4
+    Classification: 
+        level: coding
+        details: recreate map and create multi-map
+```
+```python
+Job2022_06_1720_02(TODO, Time, Classification):
+    TODO:
+        status: 0
+    Time: 
+        startime: 20220617
+        deadline: 20220620
+        delta: 4
+    Classification: 
+        level: coding
+        details: modify swin unet (origin -> V?)
+    """
+    use other core function insteal of softmax
+    """
+```
+
+#### Day 20
+```python
+Job2022_06_20_01(TODO, Time, Classification):
+    TODO:
+        status: 0
+    Time: 
+        startime: 20220620
+        deadline: 20220620
+        delta: 1
+    Classification: 
+        level: coding
+        details: update swin unet (origin -> V3)
+    """
+    embeding recreate:
+        
+
+    Results:
+    ----swinv3----
+    Total   19486548
+    Trainable       19486548
+    info: Saved model weights.                                                                                                                                              
+    Running Total Time: 4205.19 seconds 
+
+
+    ----swinunet original----
     Total   19344516
     Trainable       19344516
-                                                                                                                                   
-    Running Total Time: 2113.26 seconds   
+    info: Saved model weights.                                                                                                                                              
+    Running Total Time: 3457.63 seconds 
+
+
+    ----swinv3---- only one conv2d
+    Total   19358964
+    Trainable       19358964
+    info: Saved model weights.                                                                                                                                              
+    Running Total Time: 3447.38 seconds 
+
+
+    ----swinv4---- named fpn @ epoch 150
+    Total   16666176
+    Trainable       16666176
+    info: Saved model weights.                                                                                                                                              
+    Running Total Time: 2891.83 seconds     
+    """
+
+    
 ```

@@ -7,7 +7,8 @@ from model.map2022061002 import MultiAveragePool as Map
 from model.upernet import UPerNet
 from model.swin_unet_lateralsV2 import SwinTransformerSys as SwinUnet_Laterals # t_version v2
 from model.swin_unet_newembedV2 import SwinTransformerSys as SwinUnet_NewEmbed # t_version v3
-from model.swin_fpn import SwinTransformerSys as SwinUnet_FPN
+from model.swin_fpn import SwinTransformerSys as SwinUnet_FPN # t_version v4
+from model.namodel import NonAver # t_version v5
 import os
 import torch
 import torch.cuda
@@ -25,7 +26,7 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 from utils.model_evaluate import get_parameter_number, time
 # setting config
-modelname = "swinv4"
+modelname = "upernet"
 data_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
 pt_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
 weight_dir = None # "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/weights/SGD_swinlateral_global_step=9450__last_model_loss=0.053315818309783936.pt/model.bin"# None
@@ -48,6 +49,7 @@ use_log = True
 logging_steps = 1
 save_directory = "./weights/Adam_" + modelname + "_"
 device_name = "cuda:2"
+device_name_valid = "cuda:2"
 use_static = True
 
 
@@ -91,7 +93,7 @@ def setup_optim(model, learning_rate, use_scheduler=False):
 def train(
     model:nn.Module, train_dataloader:torch.utils.data.DataLoader, 
     num_train_epochs:int, valid_dataloader:torch.utils.data.DataLoader, gradient_accumulation_steps:int=gradient_accumulation_steps,
-    logging_steps:int=logging_steps, device=None, save_directory=None, warmup_epoch=100, stepbefore=None):
+    logging_steps:int=logging_steps, device=None, save_directory=None, warmup_epoch=100, stepbefore=None, valid_device=None):
     global_step = 0 if stepbefore is None else stepbefore
     # tr_loss, logging_loss = 0., 0.
     best_loss = None
@@ -103,6 +105,7 @@ def train(
         device = torch.device("cuda:0")
     else:
         device = torch.device(device) if isinstance(device, str) else device
+    valid_device = valid_device or device
     for epoch in trange(int(num_train_epochs), desc="Epoch", leave=False):
         with tqdm(train_dataloader, desc=f"Epoch {epoch}", leave=False) as batch_iterator:
             for step, (x, y) in enumerate(batch_iterator):
@@ -130,29 +133,36 @@ def train(
                     # scheduler.step()
                     model.zero_grad()
                     global_step += 1
+                    tb_writer.add_scalar("epoch", epoch, global_step)
 
 
         if (epoch+1) % logging_steps == 0 and valid_dataloader is not None:
+            model.to(valid_device)
+            
             with tqdm(valid_dataloader, desc=f"Epoch {epoch}", leave=False) as vbatch_iterator:
+                valid_loss = 0.
+                weight_total = 0
                 for step, (vx, vy) in enumerate(vbatch_iterator):
-                    vx = vx.reshape(vx.shape[1:]).to(device)
-                    vy = vy.reshape(vy.shape[1:]).to(device)
+                    vx = vx.reshape(vx.shape[1:]).to(valid_device)
+                    vy = vy.reshape(vy.shape[1:]).to(valid_device)
                     model.eval()
                     outputs = model(vx)
                     dloss = dice_loss(outputs, vy, softmax=True)
-                    if best_loss is None or best_loss > dloss:
-                        best_loss = dloss
-                        if save_directory and epoch > warmup_epoch:
-                            best_loss_save_directory = save_directory + f"best_loss={dloss.item()}.pt"
-                            # save_model(model, save_directory=best_loss_save_directory)
-                    tb_writer.add_scalar(
-                        "epoch", epoch, global_step)
-                    # tb_writer.add_scalar(
-                    #     "lr", scheduler.get_last_lr()[0], global_step)
-                    
-                    tb_writer.add_scalar("valid_loss", dloss, global_step)
-                    # logging_loss = tr_loss
-    save_model(model, save_directory + f"global_step={global_step}__last_model_loss={dloss.item()}.pt")
+                    # if best_loss is None or best_loss > dloss:
+                    #     best_loss = dloss
+                    #     if save_directory and epoch > warmup_epoch:
+                    #         best_loss_save_directory = save_directory + f"best_loss={dloss.item()}.pt"
+                    #         # save_model(model, save_directory=best_loss_save_directory)
+                    valid_loss += dloss.item() * len(vx)
+                    weight_total += len(vx)
+                
+                # tb_writer.add_scalar(
+                #     "lr", scheduler.get_last_lr()[0], global_step)
+                total_valid_loss = valid_loss / weight_total
+                tb_writer.add_scalar("valid_loss", total_valid_loss, global_step)
+                # logging_loss = tr_loss
+            model.to(device)
+    save_model(model, save_directory + f"global_step={global_step}__last_model_loss={total_valid_loss}.pt")
 
 
 
@@ -173,6 +183,8 @@ def make_model(modelname):
         model = SwinUnet_NewEmbed(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
     elif modelname in ("swinv4", "swinfpn"):
         model = SwinUnet_FPN(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
+    elif modelname in ("swinv5", "NonAver"):
+        model = NonAver(img_size=size, in_chans=input_channel, num_classes=num_classes, embed_dim=48)
     return model
 
 ## use original data
@@ -232,14 +244,16 @@ criterion = Criterion(num_classes).to(device)
 # del modelname
 # if modelname == "all":
 #     to_do = ("unet","swinunet", "map")
-to_do = ("unet","swinunet", "map", "upernet") if modelname == "all" else (modelname, )
+
+# to_do = ("unet","swinunet", "map", "upernet", "swinlateral", "swinnewembed", "swinfpn") if modelname == "all" else (modelname, )
+to_do = ( "swinlateral", "swinnewembed", "swinfpn") if modelname == "all" else (modelname, )
 for modelname in to_do:
     save_directory = "./weights/SGD_" + modelname + "_"
     # # tb_log
     if use_log:
         startime = time.ctime().replace(" ","_")
         tb_writer = SummaryWriter(
-            log_dir="/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/runs/Adam0611",
+            log_dir="/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/runs/20220621mean_valid_loss",
             filename_suffix=f"{startime}__{modelname}")
         log = DebugLog()
 
@@ -249,7 +263,7 @@ for modelname in to_do:
     print(f"----{modelname}----")
     get_parameter_number(model, True)
     start = time.time()
-    train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device)#, stepbefore=9450)
+    train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device, valid_device=device_name_valid)#, stepbefore=9450)
     end = time.time()
     delta = end - start
     print("Running Total Time: {:.2f} seconds".format(delta))

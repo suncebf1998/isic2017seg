@@ -255,7 +255,8 @@ Job2022_06_1720_02(TODO, Time, Classification):
         level: coding
         details: modify swin unet (origin -> V?)
     """
-    use other core function insteal of softmax
+    laterals V2: use other core function insteal of softmax (use None)
+    laterals V1: merge(cat(projv(x), attention(x))) shape is the same as attention(x)|value(x)
     """
 ```
 
@@ -298,11 +299,20 @@ Job2022_06_20_01(TODO, Time, Classification):
 
 
     ----swinv4---- named fpn @ epoch 150
+    Total   16 666 176
+    Trainable       16 666 176
+    info: Saved model weights.                                                                                                                                              
+    Running Total Time: 2891.83 seconds    
+
+    ----swinv4---- same as the last @ epoch 250
     Total   16666176
     Trainable       16666176
     info: Saved model weights.                                                                                                                                              
-    Running Total Time: 2891.83 seconds     
-    """
-
-    
+    Running Total Time: 4805.98 seconds     
+    """  
 ```
+unet
+/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/runs/20220621mean_valid_loss/events.out.tfevents.1655794390.ubuntu-NF5468M5.14560.0Tue_Jun_21_14:53:09_2022__unet 
+
+lateral
+/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/runs/20220621mean_valid_loss/events.out.tfevents.1655797362.ubuntu-NF5468M5.61444.0Tue_Jun_21_15:42:40_2022__swinlateral

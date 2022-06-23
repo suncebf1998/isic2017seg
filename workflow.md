@@ -309,10 +309,22 @@ Job2022_06_20_01(TODO, Time, Classification):
     Trainable       16666176
     info: Saved model weights.                                                                                                                                              
     Running Total Time: 4805.98 seconds     
+
+    more detail in result.csv
     """  
 ```
-unet
-/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/runs/20220621mean_valid_loss/events.out.tfevents.1655794390.ubuntu-NF5468M5.14560.0Tue_Jun_21_14:53:09_2022__unet 
 
-lateral
-/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/runs/20220621mean_valid_loss/events.out.tfevents.1655797362.ubuntu-NF5468M5.61444.0Tue_Jun_21_15:42:40_2022__swinlateral
+
+#### Day 22
+```python
+Job2022_06_22_01(TODO, Time, Classification):
+    TODO:
+        status: 0
+    Time: 
+        startime: 20220622
+        deadline: 20220622
+        delta: 1
+    Classification: 
+        level: coding
+        details: create ncp basic parts
+```

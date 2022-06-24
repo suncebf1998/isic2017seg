@@ -137,7 +137,10 @@ class Generator(nn.Module):
 
 
 class Down_WC(nn.Module):
-    pass
+    def __init__(self):
+        super().__init__()
+        
+
 
 
 

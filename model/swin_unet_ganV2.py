@@ -2,6 +2,7 @@
 ## Written by Chenhu Sun 2022/03/10 ~ 
 # ----------------------------
 
+from turtle import forward
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
@@ -61,6 +62,42 @@ def window_reverse(windows, window_size, H, W):
 
 ## windows_partition 的目的是 
 
+class GAN_Sequence(nn.Module):
+    def __init__(self,input_dim, lenth, dim, midim=96):
+        super().__init__()
+        self.lenth = lenth
+        self.dim = dim
+
+        self.midim = int((lenth * dim)**0.5) if midim is None else midim
+        self.linear_1 = nn.Linear(input_dim, midim)
+        self.act = nn.ReLU()
+
+        self.linear_2 = nn.Linear(midim, lenth * dim)
+        # self.linear_2 = nn.Linear(input_dim, lenth * dim)
+    
+    def forward(self, x):
+        x = self.linear_1(x)
+        x = self.act(x)
+        x = self.linear_2(x)
+        return x.reshape(x.shape[0], self.lenth, self.dim)
+
+class GAN_Conv(nn.Module):
+    def __init__(self,input_dim, lenth, dim, midim=48):
+        super().__init__()
+        self.lenth = lenth
+        self.dim = dim
+        self.midim = int((lenth * dim)**0.5) if midim is None else midim
+        self.linear_1 = nn.Linear(input_dim, midim)
+        self.act = nn.ReLU()
+        self.linear_2 = nn.Linear(midim, lenth * dim)
+    
+    def forward(self, x):
+        x = self.linear_1(x)
+        x = self.act(x)
+        x = self.linear_2(x)
+        return x.reshape(x.shape[0], self.lenth, self.dim)
+
+
 class WindowAttention(nn.Module):
     r""" Window based multi-head self attention (W-MSA) module with relative position bias.
     It supports both of shifted and non-shifted window.
@@ -75,13 +112,14 @@ class WindowAttention(nn.Module):
         proj_drop (float, optional): Dropout ratio of output. Default: 0.0
     """
 
-    def __init__(self, dim, window_size, num_heads, num_patches, qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.):
+    def __init__(self, dim, window_size, num_heads, qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.):
 
         super().__init__()
         self.dim = dim
         self.window_size = window_size  # Wh, Ww
         self.num_heads = num_heads
         head_dim = dim // num_heads
+        self.qk = GAN_Sequence(32, self.window_size[0] ** 2, self.window_size[0] ** 2 * num_heads)
         self.scale = qk_scale or head_dim ** -0.5
 
         # define a parameter table of relative position bias
@@ -103,7 +141,6 @@ class WindowAttention(nn.Module):
         
 
         self.v = nn.Linear(dim, dim, bias=qkv_bias)
-        self.qk = nn.Linear(dim, num_patches * num_heads, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
@@ -118,9 +155,11 @@ class WindowAttention(nn.Module):
             mask: (0/-inf) mask with shape of (num_windows, Wh*Ww, Wh*Ww) or None
         """
         B_, N, C = x.shape
-        v = self.v(x).reshape(B_, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3) 
-        qk = self.qk(x).reshape(B_, N, self.num_heads, N).permute(0, 2, 1, 3) 
-        # q_k, v = qkv[0], qkv[1]  # make torchscript happy (cannot use tensor as tuple)## B, nH, N, C/heads
+        z = torch.randn(B_, 32).type_as(x)
+        v = self.v(x).reshape(B_, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
+        qk = self.qk(z).reshape(B_, N, self.num_heads, N).transpose(1, 2)
+        # q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)## B, nH, N, C/heads
+
         attn = qk * self.scale
         # attn = (q @ k.transpose(-2, -1)) ## B, nH, N, N  N=Wh*Ww
 
@@ -200,7 +239,7 @@ class SwinTransformerBlock(nn.Module):
         self.norm1 = norm_layer(dim)
         self.attn = WindowAttention(
             dim, window_size=to_2tuple(self.window_size), num_heads=num_heads,
-            qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop, num_patches=self.window_size ** 2)
+            qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop)
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)

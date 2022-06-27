@@ -7,6 +7,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import Resize, InterpolationMode
 
+class WeightConv2d(nn.Conv2d):
+    def __init__(self, *arg, **kwargs):
+        super().__init__(*arg, **kwargs)
+        self.softmax = nn.Softmax(dim=-1)
+    
+    def forward(self, input):
+        d1, d2, h, w = self.weight.shape
+        weight = self.weight.flatten(-2, -1)
+        weight = self.softmax(weight)
+        weight = weight.reshape(d1, d2, h, w)
+        return self._conv_forward(input, weight, self.bias)
+
 
 
 class DoubleConv(nn.Module):
@@ -17,10 +29,10 @@ class DoubleConv(nn.Module):
         if not mid_channels:
             mid_channels = out_channels
         self.double_conv = nn.Sequential(
-            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
+            WeightConv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(mid_channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            WeightConv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         )

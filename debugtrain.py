@@ -11,6 +11,9 @@ from model.swin_fpn import SwinTransformerSys as SwinUnet_FPN # t_version v4
 from model.namodel import NonAver # t_version v5
 from model.swin_unet_Linear_softmax import SwinTransformerSys as SwinUnet_LS # t_version v6
 from model.swin_unet_ganV2 import SwinTransformerSys as SwinUnet_GAN # t_version v7
+from model.swin_unet_ezsoftmax import SwinTransformerSys as SwinUnet_EZ # t_version v8
+from model.unet_model_softconv import UNet as SoftUNet # t_version v9
+from model.unet_model_softconvv2 import UNet as SoftUNet_v2 # t_version v9
 import os
 import torch
 import torch.cuda
@@ -28,7 +31,7 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 from utils.model_evaluate import get_parameter_number, time
 # setting config
-modelname = "gansoftmaxv2"
+modelname = "upernet"
 data_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
 pt_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
 weight_dir = None # "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/weights/SGD_swinlateral_global_step=9450__last_model_loss=0.053315818309783936.pt/model.bin"# None
@@ -191,6 +194,12 @@ def make_model(modelname):
         model = SwinUnet_LS(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
     elif modelname in ("gansoftmaxv2", "swinv7"):
         model = SwinUnet_GAN(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
+    elif modelname in ("swinv8", "easyswin"):
+        model = SwinUnet_EZ(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
+    elif modelname in ("swinv9", "softconv"):
+        model = SoftUNet(input_channel, num_classes)
+    elif modelname in ("swinv10", "softconvv2"):
+        model = SoftUNet_v2(input_channel, num_classes)
     return model
 
 ## use original data

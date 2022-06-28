@@ -31,7 +31,7 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 from utils.model_evaluate import get_parameter_number, time
 # setting config
-modelname = "upernet"
+modelname = "swinunet"
 data_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
 pt_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
 weight_dir = None # "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/weights/SGD_swinlateral_global_step=9450__last_model_loss=0.053315818309783936.pt/model.bin"# None
@@ -278,7 +278,7 @@ for modelname in to_do:
     print(f"----{modelname}----")
     get_parameter_number(model, True)
     start = time.time()
-    train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device, valid_device=device_name_valid)#, stepbefore=9450)
+    # train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device, valid_device=device_name_valid)#, stepbefore=9450)
     end = time.time()
     delta = end - start
     print("Running Total Time: {:.2f} seconds".format(delta))

@@ -126,6 +126,7 @@ class WindowAttention(nn.Module):
         relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
             self.window_size[0] * self.window_size[1], self.window_size[0] * self.window_size[1], -1)  # Wh*Ww,Wh*Ww,nH
         relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
+        print(f"{self._get_name()}: attn's shape {attn.shape}")
         attn = attn + relative_position_bias.unsqueeze(0)
 
         if mask is not None:
@@ -234,6 +235,7 @@ class SwinTransformerBlock(nn.Module):
     def forward(self, x):
         H, W = self.input_resolution
         B, L, C = x.shape
+        # print(f"{self._get_name()}, shape: {x.shape}")
         assert L == H * W, "input feature has wrong size"
 
         shortcut = x
@@ -251,6 +253,8 @@ class SwinTransformerBlock(nn.Module):
         x_windows = x_windows.view(-1, self.window_size * self.window_size, C)  # nW*B, window_size*window_size, C
 
         # W-MSA/SW-MSA
+        # print('~'*10)
+        # print(type(self.attn_mask))
         attn_windows = self.attn(x_windows, mask=self.attn_mask)  # nW*B, window_size*window_size, C
 
         # merge windows
@@ -436,10 +440,11 @@ class BasicLayer(nn.Module):
             self.downsample = None
 
     def forward(self, x):
-        for blk in self.blocks:
+        for i, blk in enumerate(self.blocks):
             if self.use_checkpoint:
                 x = checkpoint.checkpoint(blk, x)
             else:
+                # print(f"{i}th: {x.shape}")
                 x = blk(x)
         if self.downsample is not None:
             x = self.downsample(x)
@@ -723,7 +728,8 @@ class SwinTransformerSys(nn.Module):
         x = self.pos_drop(x)
         x_downsample = []
 
-        for layer in self.layers:
+        for i, layer in enumerate(self.layers):
+            # print(f"the {i}th: {x.shape}")
             x_downsample.append(x)
             x = layer(x)
 
@@ -798,24 +804,10 @@ if __name__ == "__main__":
         "use_checkpoint":False, 
         "final_upsample":"expand_first"
     }
-    def get_parameter_number(model: torch.nn.Module, printable:bool=False) -> dict:
-        """
-        stat the total param num and the num of trainable
-        model: the model to be evaluated.
-        ret: the dict of "Total" and "Trainable"
-        """
-        total_num = sum(p.numel() for p in model.parameters())
-        trainable_num = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        model_info = {'Total': total_num, 'Trainable': trainable_num}
-        if printable:
-            for key, value in model_info.items():
-                print(key, value, sep="\t")
-        return model_info
     model = SwinTransformerSys(**config)
     device = torch.device("cuda:1")
     x = torch.randn(32, 3 , 224, 224)
-    get_parameter_number(model, True)
-    # model = model.to(device)
-    # x = x.to(device)
-    # output = model(x)
-    # print(output.shape, output.dtype)
+    model = model.to(device)
+    x = x.to(device)
+    output = model(x)
+    print(output.shape, output.dtype)

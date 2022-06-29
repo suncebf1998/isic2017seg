@@ -69,7 +69,7 @@ class GANWindowAttention(nn.Module):
         # q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)## B, nH, N, C/heads
 
         attn = attn * self.scale
-        print(attn.shape)
+        # print(attn.shape)
         # attn = (q @ k.transpose(-2, -1)) ## B, nH, N, N  N=Wh*Ww
 
         relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(

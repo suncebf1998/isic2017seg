@@ -13,7 +13,8 @@ from model.swin_unet_Linear_softmax import SwinTransformerSys as SwinUnet_LS # t
 from model.swin_unet_ganV2 import SwinTransformerSys as SwinUnet_GAN # t_version v7
 from model.swin_unet_ezsoftmax import SwinTransformerSys as SwinUnet_EZ # t_version v8
 from model.unet_model_softconv import UNet as SoftUNet # t_version v9
-from model.unet_model_softconvv2 import UNet as SoftUNet_v2 # t_version v9
+from model.unet_model_softconvv2 import UNet as SoftUNet_v2 # t_version v10
+from model.ganattention import GANSwinTransformerSys as GanSwinUnet # t_version v11
 import os
 import torch
 import torch.cuda
@@ -31,9 +32,9 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 from utils.model_evaluate import get_parameter_number, time
 # setting config
-modelname = "swinunet"
-data_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
-pt_root_dir = "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
+modelname = "ganswinunet"
+data_root_dir = "./datasetisic/"#"/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
+pt_root_dir = "./multifiles/"# "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
 weight_dir = None # "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/weights/SGD_swinlateral_global_step=9450__last_model_loss=0.053315818309783936.pt/model.bin"# None
 train_batch_size = 64
 size = (224, 224)
@@ -54,7 +55,7 @@ use_log = True
 logging_steps = 1
 save_directory = "./weights/Adam_" + modelname + "_"
 device_name = "cuda:0"
-device_name_valid = "cuda:0"
+device_name_valid = "cpu"
 use_static = True
 
 
@@ -200,6 +201,8 @@ def make_model(modelname):
         model = SoftUNet(input_channel, num_classes)
     elif modelname in ("swinv10", "softconvv2"):
         model = SoftUNet_v2(input_channel, num_classes)
+    elif modelname in ("swinv11", "ganswinunet"):
+        model = GanSwinUnet(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
     return model
 
 ## use original data
@@ -268,7 +271,7 @@ for modelname in to_do:
     if use_log:
         startime = time.ctime().replace(" ","_")
         tb_writer = SummaryWriter(
-            log_dir="/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/runs/20220621mean_valid_loss",
+            log_dir="./runs/20220621mean_valid_loss",
             filename_suffix=f"{startime}__{modelname}")
         log = DebugLog()
 
@@ -278,7 +281,7 @@ for modelname in to_do:
     print(f"----{modelname}----")
     get_parameter_number(model, True)
     start = time.time()
-    # train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device, valid_device=device_name_valid)#, stepbefore=9450)
+    train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device, valid_device=device_name_valid)#, stepbefore=9450)
     end = time.time()
     delta = end - start
     print("Running Total Time: {:.2f} seconds".format(delta))

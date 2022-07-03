@@ -36,17 +36,17 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 from utils.model_evaluate import get_parameter_number, time
 # setting config
-modelname = "swinonlyshfit"
+modelname = "easyswin_48dim"
 data_root_dir = "./datasetisic/"#"/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
 pt_root_dir = "./multifiles/"# "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
 weight_dir = None # "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/weights/SGD_swinlateral_global_step=9450__last_model_loss=0.053315818309783936.pt/model.bin"# None
-weight_dir = "weights/SGD_swinonlyshfit_global_step=15750__last_model_loss=0.04951509666442871.pt/model.bin"
+# weight_dir = "weights/SGD_swinonlyshfit_global_step=15750__last_model_loss=0.04951509666442871.pt/model.bin"
 train_batch_size = 64
 size = (224, 224)
 iter_ratio = 1
 num_workers = 2 
 gradient_accumulation_steps = 1
-num_train_epochs = 250
+num_train_epochs = 750
 learning_rate = 5e-4 # 1e-5
 num_classes = 1
 input_channel = 3 
@@ -59,8 +59,8 @@ max_grad_norm = 1000.
 use_log = True
 logging_steps = 1
 save_directory = "./weights/Adam_" + modelname + "_"
-device_name = "cuda:1"
-device_name_valid = "cuda:1"
+device_name = "cuda:2"
+device_name_valid = "cuda:2"
 use_static = True
 
 
@@ -215,7 +215,11 @@ def make_model(modelname):
     elif modelname in ("swinv14", "ganwithouttanh"):
         model = GanSwinRemoveTanh(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
     elif modelname in ("swinv15", "swinonlyshfit"):
-        model = OnlyShfit(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2)
+        model = OnlyShfit(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2) # embed_dim
+    elif modelname in ("swinv16", "swinonlyshfit_24dim"):
+        model = OnlyShfit(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2, embed_dim=24) # embed_dim
+    elif modelname in ("swinv17", "easyswin_24dim"):
+        model = SwinUnet_EZ(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2, embed_dim=24)
     return model
 
 ## use original data
@@ -294,8 +298,8 @@ for modelname in to_do:
     print(f"----{modelname}----")
     get_parameter_number(model, True)
     start = time.time()
-    # train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device, valid_device=device_name_valid)#, stepbefore=9450)
-    train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device, valid_device=device_name_valid, stepbefore=15750)
+    train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device, valid_device=device_name_valid)#, stepbefore=9450)
+    # train(model, train_dataloader, num_train_epochs, valid_dataloader, save_directory=save_directory, device=device, valid_device=device_name_valid, stepbefore=15750)
     end = time.time()
     delta = end - start
     print("Running Total Time: {:.2f} seconds".format(delta))

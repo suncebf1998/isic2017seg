@@ -36,7 +36,7 @@ from utils.traintools import get_linear_schedule_with_warmup, DebugLog
 from torch.utils.tensorboard import SummaryWriter
 from utils.model_evaluate import get_parameter_number, time
 # setting config
-modelname = "easyswin_48dim"
+modelname = "swinunetori"
 data_root_dir = "./datasetisic/"#"/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/datasetisic/"
 pt_root_dir = "./multifiles/"# "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/multifiles/"
 weight_dir = None # "/home/phys/.58e4af7ff7f67242082cf7d4a2aac832cfac6a84/weights/SGD_swinlateral_global_step=9450__last_model_loss=0.053315818309783936.pt/model.bin"# None
@@ -220,6 +220,8 @@ def make_model(modelname):
         model = OnlyShfit(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2, embed_dim=24) # embed_dim
     elif modelname in ("swinv17", "easyswin_24dim"):
         model = SwinUnet_EZ(in_chans=input_channel, num_classes=num_classes, mlp_ratio=2, embed_dim=24)
+    elif modelname == "swinunetori":
+        model = SwinUnet(in_chans=input_channel, num_classes=num_classes) # 27 168 132 27M
     return model
 
 ## use original data
